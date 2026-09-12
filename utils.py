@@ -9,3 +9,5 @@ def download_prices(list_of_tickers, start, end):
 
 def log_returns(prices):
     return np.log(prices).diff().dropna()
+
+
