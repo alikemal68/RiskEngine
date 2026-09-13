@@ -47,7 +47,7 @@ class Portfolio:
 
     def value(self, data):
         """
-        Total portfolio data value over time.
+        Total portfolio value over time.
 
         Returns
         -------
@@ -57,6 +57,16 @@ class Portfolio:
             axis=1,
             min_count=len(self.holdings)
         )
+
+    # def variance(self, covariance_matrices):
+    #     """
+    #     Portfolio variance over time.
+
+    #     Returns
+    #     -------
+    #     pandas.Series
+    #     """
+    #     return self.weights(data) @ covariance_matrices @ self.weights(data) 
 
     def weights(self, data):
         """
