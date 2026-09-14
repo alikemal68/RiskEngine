@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-import market_data
 
 
 class Portfolio:
@@ -22,10 +21,14 @@ class Portfolio:
         if len(holdings) == 0:
             raise ValueError("holdings must not be empty.")
 
-        # if (holdings < 0).any():
-        #     raise ValueError("Negative holdings are not allowed.")
-
+        # probably have to differentiate between a multi asset portfolio and a single asset portfolio  
         self.holdings = pd.Series(holdings, dtype=float)
+
+
+        if (self.holdings < 0).any():
+            raise ValueError("Negative holdings are not allowed.")
+
+
 
         self.assets = self.holdings.index.tolist()
 
@@ -120,6 +123,8 @@ class Portfolio:
 
 
 if __name__ == "__main__":
+
+    import market_data
 
     port = Portfolio(
         holdings={
