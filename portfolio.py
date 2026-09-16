@@ -92,7 +92,7 @@ class Portfolio:
         -------
         pandas.DataFrame
         """
-        return data.log_returns()
+        return 100*data.log_returns()
 
     def loss(self, data):
         """

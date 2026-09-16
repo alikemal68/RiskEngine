@@ -3,6 +3,10 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
+import arch 
+from arch.univariate.base import ARCHModelResult
 
 
 # ============================================================
@@ -36,7 +40,7 @@ class VarianceResult:
 # Shared numerical EWMA core
 # ============================================================
 
-def _ewma_core(
+def ewma_recursion_core(
     X: np.ndarray,
     sigma0: np.ndarray,
     decay: float,
@@ -136,7 +140,7 @@ def univariate_ewma_variance_estimator(
     # EWMA recursion
     # --------------------------------------------------------
 
-    core_result = _ewma_core(
+    recursion_result = ewma_recursion_core(
         X[start:],
         sigma0,
         decay,
@@ -145,7 +149,7 @@ def univariate_ewma_variance_estimator(
     # Extract the scalar from each 1 x 1 covariance matrix
     variances = np.full(T, np.nan)
 
-    variances[start:] = core_result[:, 0, 0]
+    variances[start:] = recursion_result[:, 0, 0]
 
     # --------------------------------------------------------
     # Burn-in
@@ -239,7 +243,7 @@ def multivariate_ewma_covariance_estimator(
     # EWMA recursion
     # --------------------------------------------------------
 
-    core_result = _ewma_core(
+    recursion_result = ewma_recursion_core(
         X[start:],
         sigma0,
         decay,
@@ -251,7 +255,7 @@ def multivariate_ewma_covariance_estimator(
         np.nan,
     )
 
-    covariances[start:] = core_result
+    covariances[start:] = recursion_result
 
     # --------------------------------------------------------
     # Burn-in
@@ -282,6 +286,58 @@ def multivariate_ewma_covariance_estimator(
     )
 
 
+def fit_garch(
+    risk_factors: pd.DataFrame,
+    p=1,
+    q=1,
+    o=0,
+    dist="Normal",
+) -> ARCHModelResult:
+
+    if risk_factors.shape[1] != 1:
+        raise ValueError("Univariate GARCH requires exactly one risk factor.")
+    
+    y = risk_factors.iloc[:, 0]
+
+    model = arch.arch_model(
+        y,
+        mean="Zero",
+        vol="Garch",
+        p=p,
+        o=o,
+        q=q,
+        dist=dist,
+    )
+
+    return model.fit(disp="off")
+
+def garch_conditional_variance(
+    res: ARCHModelResult,
+    risk_factor: pd.DataFrame,
+) -> VarianceResult:
+
+    if risk_factor.shape[1] != 1:
+        raise ValueError(
+            "GARCH conditional variance requires exactly one risk factor."
+        )
+
+    asset = risk_factor.columns[0]
+
+    variance_series = (res.conditional_volatility**2).rename(asset)
+
+    return VarianceResult(
+        variances=variance_series,
+        asset=asset,
+    )
+    
+def garch_forecast(res: ARCHModelResult):
+    forecasts = res.forecast(horizon=1,  align="origin")
+
+    # cond_mean = forecasts.mean["h.1"]
+    cond_var = forecasts.variance#.iloc[-1]
+
+    return cond_var
+
 
 if __name__ == "__main__":
 
@@ -290,7 +346,7 @@ if __name__ == "__main__":
 
     port = portfolio.Portfolio(
         holdings={
-            "AAPL": 2,
+            # "AAPL": 2,
             "MSFT": 3
         }
     )
@@ -298,17 +354,37 @@ if __name__ == "__main__":
     data = market_data.MarketData.from_yfinance(
         port.assets,
         "2000-01-01",
-        "2009-12-31",
+        "2020-12-31",
     )
 
-    risk_factors = port.risk_factors(data)
+    my_risk_factors = port.risk_factors(data)
 
-    result = multivariate_ewma_covariance_estimator(
-        risk_factors
+    ewma_result = univariate_ewma_variance_estimator(
+        my_risk_factors
     )
 
-    print(result)
-    # print(result.variances)
+
+# #
+    # ewma_result.variances.plot()
+
+
+    res=fit_garch(my_risk_factors)
+    cond_var=garch_conditional_variance(res, my_risk_factors)
+    print(cond_var)
+
+    # cond_var.variances.plot()
+    # plt.show()
+
+    print(garch_forecast(res))
+
+
+
+
+    
+
+    #garch(1,1) fit: normal, student-t, skew  
+    # gjr garch fit: normal, student-t, skew
+
 
 
 # import numpy as np, pandas as pd
@@ -401,7 +477,7 @@ if __name__ == "__main__":
 #     # For N = 1 this is just a 1 x 1 matrix.
 #     sigma0 = np.array([[variance0]])
 
-#     core_result = ewma_core(
+#     recursion_result = ewma_core(
 #         X[start:],
 #         sigma0,
 #         decay
@@ -409,7 +485,7 @@ if __name__ == "__main__":
 
 #     variances = np.full(T, np.nan)
 
-#     variances[start:] = core_result[:, 0, 0]
+#     variances[start:] = recursion_result[:, 0, 0]
 
 #     # Burn-in
 #     variances[
@@ -469,7 +545,7 @@ if __name__ == "__main__":
 #     # --------------------------------------------------
 #     # Run recursion only on observations after sigma0
 #     # --------------------------------------------------
-#     core_result = ewma_core(
+#     recursion_result = ewma_core(
 #         X[start:],
 #         sigma0,
 #         decay
@@ -481,7 +557,7 @@ if __name__ == "__main__":
 #         np.nan
 #     )
 
-#     covariances[start:] = core_result
+#     covariances[start:] = recursion_result
 
 #     # Burn-in
 #     covariances[
