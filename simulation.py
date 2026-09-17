@@ -45,3 +45,35 @@ def filtered_historic_quantiles(
 
     return q
 
+
+def parametric_tail_means(
+    res: ARCHModelResult,
+    levels: list[float],
+) -> pd.Series:
+
+    dist = res.model.distribution
+    param_names = dist.parameter_names()
+
+    if param_names:
+        dist_params = res.params[param_names].to_numpy()
+    else:
+        dist_params = None
+
+    tail_means = []
+
+    for alpha in levels:
+        q = dist.ppf(alpha, dist_params)
+
+        partial_moment = dist.partial_moment(
+            1, # Order of partial moment
+            q, # Upper bound for partial moment integral
+            dist_params,
+        )
+
+        tail_means.append(partial_moment / alpha)
+
+    return pd.Series(
+        tail_means,
+        index=levels,
+        name="tail_mean",
+    )
