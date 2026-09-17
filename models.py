@@ -297,7 +297,7 @@ def fit_garch(
     if risk_factors.shape[1] != 1:
         raise ValueError("Univariate GARCH requires exactly one risk factor.")
     
-    y = risk_factors.iloc[:, 0]
+    y =100* risk_factors.iloc[:, 0] # SCALE BY 100???
 
     model = arch.arch_model(
         y,
@@ -310,25 +310,6 @@ def fit_garch(
     )
 
     return model.fit(disp="off")
-
-# def garch_conditional_variance(
-#     fit_result: ARCHModelResult,
-#     risk_factor: pd.DataFrame, # RETHINK THIS!!!!!
-# ) -> VarianceResult:
-
-#     if risk_factor.shape[1] != 1:
-#         raise ValueError(
-#             "GARCH conditional variance requires exactly one risk factor."
-#         )
-
-#     asset = risk_factor.columns[0]
-
-#     variance_series = (fit_result.conditional_volatility**2).rename(asset)
-
-#     return VarianceResult(
-#         variances=variance_series,
-#         asset=asset,
-#     )
     
 def garch_conditional_variance(
     fit_result: ARCHModelResult,
@@ -343,7 +324,7 @@ def garch_conditional_variance(
 
     asset = y.name
 
-    variance_series = (fit_result.conditional_volatility**2).rename(asset)
+    variance_series = (fit_result.conditional_volatility**2).rename(asset) / 100**2
 
     return VarianceResult(
         variances=variance_series,
@@ -356,12 +337,17 @@ def garch_conditional_variance(
     )
 
 def garch_forecast(
-        fit_result: ARCHModelResult
-        ):
-    forecasts = fit_result.forecast(horizon=1,  align="origin")
+    fit_result: ARCHModelResult,
+) -> pd.Series:
 
-    # cond_mean = forecasts.mean["h.1"]
-    cond_var = forecasts.variance#.iloc[-1]
+    asset = fit_result.model.y.name
+
+    forecasts = fit_result.forecast(
+        horizon=1,
+        align="origin",
+    )
+
+    cond_var = forecasts.variance["h.1"].rename(asset) / 100**2
 
     return cond_var
 

@@ -92,7 +92,7 @@ class Portfolio:
         -------
         pandas.DataFrame
         """
-        return 100*data.log_returns()
+        return data.log_returns()
 
     def loss(self, data):
         """
@@ -104,7 +104,7 @@ class Portfolio:
         -------
         pandas.Series
         """
-        simple_returns = np.expm1(
+        simple_returns = np.expm1(  
             self.risk_factors(data)
         )
 
