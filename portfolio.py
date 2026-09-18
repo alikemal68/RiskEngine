@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-
+from co_variance_results import CovarianceResult, VarianceResult
 
 class Portfolio:
     """Simple buy-and-hold stock portfolio."""
@@ -69,7 +69,146 @@ class Portfolio:
     #     -------
     #     pandas.Series
     #     """
-    #     return self.weights(data) @ covariance_matrices @ self.weights(data) 
+    #     # return self.weights(data) @ covariance_matrices @ self.weights(data) 
+
+    def portfolio_variance(
+        self,
+        data,
+        covariance_result: CovarianceResult,
+    ) -> pd.Series:
+        
+        weights = (
+        self.weights(data)
+        .shift(1)
+        .reindex(
+            index=covariance_result.dates,
+            columns=covariance_result.assets,
+            )
+        )
+
+        W = weights.to_numpy()
+        Sigma = covariance_result.covariances
+
+        portfolio_variance = np.einsum(
+            "ti,tij,tj->t",
+            W,
+            Sigma,
+            W,
+        )
+
+        return pd.Series(
+            portfolio_variance,
+            index=covariance_result.dates,
+            name="portfolio_variance",
+        )
+
+    
+    def variance_forecast(
+        self,
+        data,
+        covariance_forecast: pd.DataFrame,
+    ) -> pd.Series:
+
+        assets = covariance_forecast.columns
+
+        weights = (
+            self.weights(data)
+            .iloc[-1]
+            .reindex(assets)
+            .to_numpy()
+        )
+
+        Sigma = covariance_forecast.to_numpy()
+
+        portfolio_variance = (
+            weights
+            @ Sigma
+            @ weights
+        )
+
+        return pd.Series(
+            [portfolio_variance],
+            index=[data.prices.index[-1]],
+            name="portfolio_variance",
+        )
+
+
+#     def variance(
+#     self,
+#     data,
+#     covariance: CovarianceResult | pd.DataFrame,
+# ) -> pd.Series:
+
+#         weights = self.weights(data)
+
+#         # --------------------------------------------------------
+#         # Historical covariance series
+#         # --------------------------------------------------------
+
+#         if isinstance(covariance, CovarianceResult):
+
+#             dates = covariance.dates
+#             assets = covariance.assets
+
+#             # For return X_t, use portfolio weights known at t-1
+#             historical_weights = (
+#                 weights
+#                 .shift(1)
+#                 .reindex(index=dates, columns=assets)
+#             )
+
+#             W = historical_weights.to_numpy()
+#             Sigma = covariance.covariances
+
+#             portfolio_variance = np.einsum(
+#                 "ti,tij,tj->t",
+#                 W,
+#                 Sigma,
+#                 W,
+#             )
+
+#             return pd.Series(
+#                 portfolio_variance,
+#                 index=dates,
+#                 name="portfolio_variance",
+#             )
+
+#         # --------------------------------------------------------
+#         # Single covariance forecast
+#         # --------------------------------------------------------
+
+#         elif isinstance(covariance, pd.DataFrame):
+
+#             assets = covariance.columns
+
+#             # Forecast for t+1 uses weights known at t
+#             current_weights = (
+#                 weights
+#                 .iloc[-1]
+#                 .reindex(assets)
+#                 .to_numpy()
+#             )
+
+#             Sigma_forecast = covariance.to_numpy()
+
+#             portfolio_variance = (
+#                 current_weights
+#                 @ Sigma_forecast
+#                 @ current_weights
+#             )
+
+#             return pd.Series(
+#                 data=[portfolio_variance],
+#                 index=[weights.index[-1]],
+#                 name="portfolio_variance",
+#             )
+
+#         else:
+#             raise TypeError(
+#                 "covariance must be a CovarianceResult "
+#                 "or a covariance forecast DataFrame."
+#             )
+
 
     def weights(self, data):
         """

@@ -6,25 +6,59 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import arch 
+# import arch 
 from arch.univariate.base import ARCHModelResult
+from arch.univariate import Normal, StudentsT, SkewStudent
+
+
+def _get_distribution_and_params(
+    distribution: str,
+    dist_params: dict[str, float] | None = None,
+):
+    if distribution == "normal":
+        dist = Normal()
+
+    elif distribution == "student_t":
+        dist = StudentsT()
+
+    elif distribution == "skew_student_t":
+        dist = SkewStudent()
+
+    else:
+        raise ValueError(
+            "Unsupported distribution. "
+            "Use normal, student_t or skew_student_t."
+        )
+
+    param_names = dist.parameter_names()
+
+    if param_names:
+        params = np.array([
+            dist_params[name]
+            for name in param_names
+        ])
+    else:
+        params = None
+
+#     if param_names and dist_params is None:
+#         raise ValueError(
+#             f"{distribution} requires parameters: {param_names}"
+# )
+
+
+    return dist, params
 
 
 
 def parametric_quantiles(
-    res: ARCHModelResult,
+    distribution: str,
     levels: list[float],
+    dist_params: dict[str, float] | None = None,
 ) -> pd.Series:
 
-    dist = res.model.distribution
-    param_names = dist.parameter_names()
+    dist, params = _get_distribution_and_params(distribution,dist_params)
 
-    if param_names:
-        dist_params = res.params[param_names].to_numpy()
-    else:
-        dist_params = None
-
-    q = dist.ppf(levels, dist_params)
+    q = dist.ppf(levels, params)
 
     return pd.Series(
         q,
@@ -33,41 +67,59 @@ def parametric_quantiles(
     )
 
 
+# def filtered_historic_quantiles(
+#     fit_result: ARCHModelResult,
+#     levels: list[float],
+# ) -> pd.Series:
+
+#     std_residuals = fit_result.std_resid.dropna()
+
+#     q = std_residuals.quantile(levels)
+#     q.name = "quantile"
+
+#     return q
+
+
+def std_residuals(
+    non_std_residuals: pd.Series,
+    cond_var: pd.Series)-> pd.Series:
+  
+    return (non_std_residuals/cond_var).dropna()
+
 def filtered_historic_quantiles(
-    res: ARCHModelResult,
+    
     levels: list[float],
 ) -> pd.Series:
 
-    std_residuals = res.std_resid.dropna()
+    
 
     q = std_residuals.quantile(levels)
     q.name = "quantile"
 
     return q
+    
 
 
 def parametric_tail_means(
-    res: ARCHModelResult,
+    distribution: str,
     levels: list[float],
+    dist_params: dict[str, float] | None = None,
 ) -> pd.Series:
 
-    dist = res.model.distribution
-    param_names = dist.parameter_names()
-
-    if param_names:
-        dist_params = res.params[param_names].to_numpy()
-    else:
-        dist_params = None
+    dist, params = _get_distribution_and_params(
+        distribution,
+        dist_params,
+    )
 
     tail_means = []
 
     for alpha in levels:
-        q = dist.ppf(alpha, dist_params)
+        q = dist.ppf(alpha, params)
 
-        partial_moment = dist.partial_moment(
-            1, # Order of partial moment
-            q, # Upper bound for partial moment integral
-            dist_params,
+        partial_moment = dist.partial_moment(   
+                1, # Order of partial moment 
+                q, # Upper bound for partial moment integral
+            params,
         )
 
         tail_means.append(partial_moment / alpha)

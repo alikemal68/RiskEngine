@@ -1,9 +1,11 @@
-from dataclasses import dataclass, field
-from typing import Any
+# from dataclasses import dataclass, field
+# from typing import Any
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from co_variance_results import CovarianceResult, VarianceResult
 
 import arch 
 from arch.univariate.base import ARCHModelResult
@@ -13,27 +15,27 @@ from arch.univariate.base import ARCHModelResult
 # Result objects
 # ============================================================
 
-@dataclass
-class CovarianceResult:
-    """Time series of covariance matrices."""
+# @dataclass
+# class CovarianceResult:
+#     """Time series of covariance matrices."""
 
-    covariances: np.ndarray
-    dates: pd.Index
-    assets: pd.Index
+#     covariances: pd.Series
+#     dates: pd.Index
+#     assets: pd.Index
 
-    model: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+#     model: str | None = None
+#     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
-class VarianceResult:
-    """Time series of variances."""
+# @dataclass
+# class VarianceResult:
+#     """Time series of variances."""
 
-    variances: pd.Series
-    asset: str
+#     variances: pd.Series
+#     asset: str
 
-    model: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+#     model: str | None = None
+#     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 # ============================================================
@@ -285,6 +287,110 @@ def multivariate_ewma_covariance_estimator(
         },
     )
 
+# def ewma_forecast(
+#     risk_factor: pd.DataFrame,
+#     variance_result: VarianceResult | CovarianceResult
+# ) -> pd.Series:
+
+#     date = risk_factor.index[-1]
+#     asset = risk_factor.columns[0]
+
+#     # check that risk_factor.index[-1] matches variance_result.variances.index[-1] ???
+
+#     decay = variance_result.metadata["decay"]
+
+#     last_cond_var = variance_result.variances.iloc[-1]
+#     last_risk_factor = risk_factor.iloc[-1, 0]
+
+#     forecast = (
+#         decay * last_cond_var
+#         + (1 - decay) * last_risk_factor**2
+#     )
+
+#     return pd.Series(
+#         data=[forecast],
+#         index=[date],
+#         name=asset,
+#     )
+
+def ewma_forecast_core(
+    last_risk_factors: np.ndarray,
+    last_covar: np.ndarray,
+    decay: float,
+) -> np.ndarray:
+    # """
+    # One-step-ahead EWMA covariance forecast.
+    # """
+
+    return (
+        decay * last_covar
+        + (1 - decay)
+        * np.outer(last_risk_factors, last_risk_factors)
+    )
+
+def univariate_ewma_forecast(
+    risk_factor: pd.DataFrame,
+    variance_result: VarianceResult,
+) -> pd.Series:
+
+    if risk_factor.shape[1] != 1:
+        raise ValueError(
+            "Univariate EWMA forecast requires exactly one risk factor."
+        )
+
+    date = risk_factor.index[-1]
+    asset = risk_factor.columns[0]
+
+    decay = variance_result.metadata["decay"]
+
+    last_variance = variance_result.variances.iloc[-1]
+
+    last_risk_factor = risk_factor.iloc[-1].to_numpy()
+
+    forecast = ewma_forecast_core(
+        last_risk_factors=last_risk_factor,
+        last_covar=np.array([[last_variance]]),
+        decay=decay,
+    )
+
+    return pd.Series(
+        data=[forecast[0, 0]],
+        index=[date],
+        name=asset,
+    )
+
+
+def multivariate_ewma_forecast(
+    risk_factors: pd.DataFrame,
+    covariance_result: CovarianceResult,
+) -> pd.DataFrame:
+
+    if risk_factors.shape[1] < 2:
+        raise ValueError(
+            "Multivariate EWMA forecast requires at least two risk factors."
+        )
+
+    assets = risk_factors.columns
+
+    decay = covariance_result.metadata["decay"]
+
+    last_covar = covariance_result.covariances[-1]
+
+    last_risk_factors = (
+        risk_factors.iloc[-1].to_numpy()
+    )
+
+    forecast = ewma_forecast_core(
+        last_risk_factors=last_risk_factors,
+        last_covar=last_covar,
+        decay=decay,
+    )
+
+    return pd.DataFrame(
+        forecast,
+        index=assets,
+        columns=assets,
+    )
 
 def fit_garch(
     risk_factors: pd.DataFrame,
@@ -342,12 +448,12 @@ def garch_forecast(
 
     asset = fit_result.model.y.name
 
-    forecasts = fit_result.forecast(
+    forecast = fit_result.forecast(
         horizon=1,
         align="origin",
     )
 
-    cond_var = forecasts.variance["h.1"].rename(asset) / 100**2
+    cond_var = forecast.variance["h.1"].rename(asset) / 100**2
 
     return cond_var
 
