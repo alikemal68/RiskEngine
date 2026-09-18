@@ -11,6 +11,7 @@ from arch.univariate.base import ARCHModelResult
 from arch.univariate import Normal, StudentsT, SkewStudent
 
 
+
 def _get_distribution_and_params(
     distribution: str,
     dist_params: dict[str, float] | None = None,
@@ -80,24 +81,27 @@ def parametric_quantiles(
 #     return q
 
 
-def std_residuals(
-    non_std_residuals: pd.Series,
-    cond_var: pd.Series)-> pd.Series:
+
+
+###################################################################################
+# def std_residuals(
+#     non_std_residuals: pd.Series,
+#     cond_var: pd.Series)-> pd.Series:
   
-    return (non_std_residuals/cond_var).dropna()
+#     return (non_std_residuals/cond_var).dropna()
 
-def filtered_historic_quantiles(
+# def filtered_historic_quantiles(
     
-    levels: list[float],
-) -> pd.Series:
+#     levels: list[float],
+# ) -> pd.Series:
 
     
 
-    q = std_residuals.quantile(levels)
-    q.name = "quantile"
+#     q = std_residuals.quantile(levels)
+#     q.name = "quantile"
 
-    return q
-    
+#     return q
+###################################################################################
 
 
 def parametric_tail_means(
