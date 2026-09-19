@@ -16,19 +16,19 @@ def _get_distribution_and_params(
     distribution: str,
     dist_params: dict[str, float] | None = None,
 ):
-    if distribution == "normal":
+    if distribution == "Normal":
         dist = Normal()
 
-    elif distribution == "student_t":
+    elif distribution == "StudentsT":
         dist = StudentsT()
 
-    elif distribution == "skew_student_t":
+    elif distribution == "SkewStudent":
         dist = SkewStudent()
 
     else:
         raise ValueError(
             "Unsupported distribution. "
-            "Use normal, student_t or skew_student_t."
+            "Use Normal, StudentsT or SkewStudent."
         )
 
     param_names = dist.parameter_names()

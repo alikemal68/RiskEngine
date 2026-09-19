@@ -343,7 +343,7 @@ def univariate_ewma_forecast(
 
     decay = variance_result.metadata["decay"]
 
-    last_variance = variance_result.variances.iloc[-1]
+    last_variance = variance_result.variances.loc[date]
 
     last_risk_factor = risk_factor.iloc[-1].to_numpy()
 
@@ -358,7 +358,6 @@ def univariate_ewma_forecast(
         index=[date],
         name=asset,
     )
-
 
 def multivariate_ewma_forecast(
     risk_factors: pd.DataFrame,
