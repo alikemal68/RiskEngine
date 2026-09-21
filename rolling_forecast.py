@@ -9,24 +9,33 @@ import models
 from co_variance_results import CovarianceResult, VarianceResult
 
 def garch_forecaster(
-    window,
+    window: pd.DataFrame,
+    state=None,
     p=1,
     q=1,
     o=0,
     dist="Normal",
 ):
-    fit = models.fit_garch(
+    fit_result = models.fit_garch(
         window,
         p=p,
         q=q,
         o=o,
         dist=dist,
+        starting_values=state,
     )
 
-    return models.garch_forecast(fit)
+    forecast = models.garch_forecast(fit_result)
+
+    # new_state = fit_result.params.to_numpy()
+    new_state = fit_result.params.to_numpy(copy=True)
+    
+
+    return forecast, new_state
 
 def univariate_ewma_forecaster(
-    window,
+    window: pd.DataFrame,
+    state=None,
     decay=0.96,
 ):
     result = models.univariate_ewma_variance_estimator(
@@ -37,10 +46,11 @@ def univariate_ewma_forecaster(
     return models.univariate_ewma_forecast(
         window,
         result,
-    )
+    ), None
 
 def multivariate_ewma_forecaster(
-    window,
+    window: pd.DataFrame,
+    state=None,
     decay=0.96,
 ):
     result = models.multivariate_ewma_covariance_estimator(
@@ -51,7 +61,7 @@ def multivariate_ewma_forecaster(
     return models.multivariate_ewma_forecast(
         window,
         result,
-    )
+    ), None
 
 
 def rolling_forecast(
@@ -64,14 +74,17 @@ def rolling_forecast(
     results = []
     dates = []
 
+    state = None
+
     for t in range(window_length, len(risk_factors)):
 
         window = risk_factors.iloc[
             t - window_length:t
         ]
 
-        forecast = forecaster(
+        forecast, state = forecaster(
             window,
+            state=state,
             **forecaster_kwargs,
         )
 
@@ -120,39 +133,7 @@ def rolling_forecast(
 
 
 
-if __name__ == "__main__":
 
-    
-    import portfolio
-    import market_data
-
-    portBT = portfolio.Portfolio(
-    holdings={
-        "AAPL": 2,
-        "MSFT": 3
-    }
-    )
-
-    dataBT = market_data.MarketData.from_yfinance(
-    portBT.assets,
-    "2000-01-01",
-    "2010-12-31",
-    )   
-
-    risk_factorsBT = portBT.risk_factors(dataBT)
-
-    my_forecast = rolling_forecast(
-        risk_factorsBT,
-        window_length=500,
-        forecaster=multivariate_ewma_forecaster,
-        decay=0.96
-        # p=1,
-        # q=1,
-        # o=0,
-        # dist="StudentsT",
-    )
-
-    print(my_forecast)
 
 
 #     risk_factorsBT = portBT.risk_factors(dataBT)

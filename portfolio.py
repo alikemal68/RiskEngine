@@ -233,6 +233,36 @@ class Portfolio:
         """
         return data.log_returns()
 
+    def portfolio_weighted_log_return(self, data):
+        """
+        Portfolio return based on weighted asset log returns.
+
+        Uses portfolio weights from the previous day.
+
+        Returns
+        -------
+        pandas.Series
+        """
+
+        risk_factors = self.risk_factors(data)
+
+        previous_weights = (
+            self.weights(data)
+            .shift(1)
+            .reindex(risk_factors.index)
+        )
+
+        portfolio_returns = (
+            previous_weights * risk_factors
+        ).sum(
+            axis=1,
+            min_count=len(self.holdings),
+        )
+
+        return portfolio_returns.rename(
+            "portfolio_weighted_log_return"
+        ).dropna()
+
     def loss(self, data):
         """
         Historical one-day portfolio losses.
