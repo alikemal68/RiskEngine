@@ -2,12 +2,13 @@
 from dataclasses import dataclass, field
 from typing import Any
 import pandas as pd
+import numpy as np
 
 @dataclass
 class CovarianceResult:
     """Time series of covariance matrices."""
 
-    covariances: pd.Series
+    covariances: np.ndarray
     dates: pd.Index
     assets: pd.Index
 
