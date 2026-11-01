@@ -1,2 +1,2 @@
 # RiskEngine
-Quantitative risk engine build in Python for market risk forecasting. The project implements historical, parametric, and Monte Carlo VaR/Expected Shortfall methods, volatility models including EWMA and GARCH, rolling risk forecasts, and backtesting tools.
+Developed a Python-based market risk engine for portfolio Value at Risk (VaR) and Expected Shortfall (ES) estimation, incorporating EWMA, GARCH, and asymmetric GJR-GARCH volatility models with Normal, Student-t, and skewed Student-t innovations. Implemented rolling out-of-sample risk forecasts and statistical model validation using Kupiec and Christoffersen backtesting tests.
