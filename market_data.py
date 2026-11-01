@@ -9,7 +9,7 @@ class MarketData:
 
     @property
     def assets(self):
-         return self.prices.columns.tolist()
+        return self.prices.columns.tolist()
     
     @property
     def start(self):
